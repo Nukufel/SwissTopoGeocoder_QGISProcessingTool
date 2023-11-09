@@ -96,7 +96,7 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
         # usually takes the form of a newly created vector layer when the
         # algorithm is run in QGIS).
 
-        self.addParameter(
+        self.addOutput(
             QgsProcessingOutputMapLayer(
                 self.OUTPUT,
                 self.tr('Output layer')
@@ -120,22 +120,18 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
 
 
         try:
-            self.run_define_layer(source.name(), column_surce)
-            """thread = threading.Thread(target=self.run_define_layer, args=(source.name(), column_surce))
-            thread.start()"""
+            new_layer = self.define_layer(source.name(), column_surce, feedback)
+            parameters[self.OUTPUT] = new_layer
+            QgsProject.instance().addMapLayer(new_layer)
+            print(new_layer)
         except Exception as e:
             print(e)
-
-        """
-        (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
-                context, source.fields(), source.wkbType(), source.sourceCrs())
-
 
 
 
         # Compute the number of steps to display within the progress bar and
         # get features from source
-        total = 100.0 / source.featureCount() if source.featureCount() else 0
+        """total = 100.0 / source.featureCount() if source.featureCount() else 0
         features = source.getFeatures()
 
         for current, feature in enumerate(features):
@@ -143,11 +139,9 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
             if feedback.isCanceled():
                 break
 
-            # Add a feature in the sink
-            #sink.addFeature(feature, QgsFeatureSink.FastInsert)
 
             # Update the progress bar
-            feedback.setProgress(int(current * total))
+            feedback.setProgress(int(current * total))"""
 
         # Return the results of the algorithm. In this case our only result is
         # the feature sink which contains the processed features, but some
@@ -155,10 +149,8 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
         # statistics, etc. These should all be included in the returned
         # dictionary, with keys matching the feature corresponding parameter
         # or output names.
-        return {self.OUTPUT: dest_id}
-        """
-        return {}
 
+        return {self.OUTPUT: new_layer}
     def name(self):
         """
         Returns the algorithm name, used for identifying the algorithm. This
@@ -226,7 +218,8 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
             new_layer.updateExtents()
             new_layer.commitChanges()
 
-    def define_layer(self, data_layer_name, address_col):
+
+    def define_layer(self, data_layer_name, address_col, feedback):
         try:
             layer = QgsProject.instance().mapLayersByName(data_layer_name)[0]
         except:
@@ -245,19 +238,20 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
         fet = QgsFeature()
 
         for feature in layer.getFeatures():
+            if feedback.isCanceled():
+                break
             try:
                 address = feature[address_col]
                 self.get_cords(address, fet, provider, new_layer)
             except:
                 # give push msg
-
                 print(address, 'failed')
 
             time.sleep(1)
 
-        QgsProject.instance().addMapLayer(new_layer)
+        new_layer.commitChanges()
 
-        print("New point layer created and added to the map.")
+        #QgsProject.instance().addMapLayer(new_layer)
+        #print("New point layer created and added to the map.")
+        return new_layer
 
-    def run_define_layer(self, layer_name, column_name):
-        self.define_layer(layer_name, column_name)
