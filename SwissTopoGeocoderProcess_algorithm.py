@@ -42,7 +42,8 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingAlgorithm,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterFeatureSink,
-                       QgsProcessingParameterField)
+                       QgsProcessingParameterField,
+                       QgsProcessingOutputMapLayer)
 
 
 class geocoderAlgorithm(QgsProcessingAlgorithm):
@@ -63,7 +64,7 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
     # used when calling the algorithm from another algorithm, or when
     # calling from the QGIS console.
 
-    """OUTPUT = 'OUTPUT'"""
+    OUTPUT = 'OUTPUT'
     LAYER_INPUT = 'LAYER_INPUT'
     COLUMN_INPUT = 'COLUMN_INPUT'
 
@@ -94,14 +95,14 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
         # We add a feature sink in which to store our processed features (this
         # usually takes the form of a newly created vector layer when the
         # algorithm is run in QGIS).
-        """
+
         self.addParameter(
-            QgsProcessingParameterFeatureSink(
+            QgsProcessingOutputMapLayer(
                 self.OUTPUT,
                 self.tr('Output layer')
             )
         )
-        """
+
 
     def processAlgorithm(self, parameters, context, feedback):
         """
@@ -117,9 +118,11 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
         column_surce = self.parameterAsString(parameters, self.COLUMN_INPUT, context)
         print(column_surce)
 
+
         try:
-            thread = threading.Thread(target=self.run_define_layer, args=(source.name(), column_surce))
-            thread.start()
+            self.run_define_layer(source.name(), column_surce)
+            """thread = threading.Thread(target=self.run_define_layer, args=(source.name(), column_surce))
+            thread.start()"""
         except Exception as e:
             print(e)
 
