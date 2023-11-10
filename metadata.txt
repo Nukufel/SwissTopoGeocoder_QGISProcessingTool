@@ -8,9 +8,9 @@ qgisMinimumVersion=3.0
 description=SwissTopoGeocoderProcess
 version=0.1
 author=Nukufel
-email=Nukufel
+email=niklas.vogel@ost.ch
 
-about=Provide a brief description of the plugin and its purpose.
+about=SwissTopoGeocoder is a QGIS plugin designed to provide geocoding functionality using the SwissTopo geocoding service. The plugin allows users to perform geocoding on a vector layer by adding new features with coordinates based on address attributes.
 
 tracker=http://bugs
 repository=http://repo
