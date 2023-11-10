@@ -64,7 +64,7 @@ class geocoderPlugin(object):
 
     def unload(self):
         QgsApplication.processingRegistry().removeProvider(self.provider)
-
+"""
     @staticmethod
     def error_handling_user(type, msg):
         iface.messageBar().pushWarning(type, msg)
@@ -133,3 +133,4 @@ class geocoderPlugin(object):
                 thread.start()
             except:
                 print("failed")
+"""

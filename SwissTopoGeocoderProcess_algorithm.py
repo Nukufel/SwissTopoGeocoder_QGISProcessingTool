@@ -44,7 +44,8 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterField,
                        QgsProcessingOutputMapLayer,
                        QgsProcessingParameterVectorDestination,
-                       QgsProcessingOutputVectorLayer)
+                       QgsProcessingOutputVectorLayer,
+                       QgsProcessingFeedback)
 
 
 class geocoderAlgorithm(QgsProcessingAlgorithm):
@@ -113,19 +114,17 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsLayer(parameters, self.LAYER_INPUT, context)
-        print(source.name())
-
         column_surce = self.parameterAsString(parameters, self.COLUMN_INPUT, context)
-        print(column_surce)
 
         try:
-            new_layer = self.define_layer(source.name(), column_surce, feedback)
+            new_layer = self.define_layer(source, column_surce, feedback)
             QgsProject.instance().addMapLayer(new_layer)
-            print(new_layer)
         except Exception as e:
+            feedback.reportError(str(e), True)
             print(e)
             return {}
 
+        #return {}
         return {self.OUTPUT: new_layer}
 
     def name(self):
@@ -189,10 +188,11 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
             new_layer.updateExtents()
             new_layer.commitChanges()
 
-    def define_layer(self, data_layer_name, address_col, feedback):
+    def define_layer(self, data_layer, address_col, feedback):
         try:
-            layer = QgsProject.instance().mapLayersByName(data_layer_name)[0]
+            layer = QgsProject.instance().mapLayersByName(data_layer.name())[0]
         except:
+            feedback.reportError(self, "Layer does not exist.", True)
             print("Leyername does not exist.")
             return None
 
@@ -207,17 +207,22 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
 
         fet = QgsFeature()
 
-        for feature in layer.getFeatures():
+        total = 100.0 / data_layer.featureCount() if data_layer.featureCount() else 0
+        features = data_layer.getFeatures()
+
+        for current, feature in enumerate(features):
             if feedback.isCanceled():
                 break
 
             try:
                 address = feature[address_col]
                 self.get_cords(address, fet, provider, new_layer)
-            except:
+            except Exception as e:
                 # give push msg
-                print(address, 'failed')
+                feedback.pushInfo(address + " failed")
+                print(address, 'failed:', str(e))
 
+            feedback.setProgress(int(current * total))
             time.sleep(1)
 
         new_layer.commitChanges()
