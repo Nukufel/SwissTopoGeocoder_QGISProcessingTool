@@ -119,6 +119,7 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
         try:
             new_layer = self.define_layer(source, column_surce, feedback)
             QgsProject.instance().addMapLayer(new_layer)
+            feedback.pushInfo("Added new layer to map")
         except Exception as e:
             feedback.reportError(str(e), True)
             print(e)

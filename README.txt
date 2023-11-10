@@ -34,8 +34,7 @@ If you want to contribute to the development of the SwissTopoGeocoder plugin, fo
 
 1. Clone the repository:
 
-   ```bash
-   git clone https://github.com/yourusername/SwissTopoGeocoder.git
+   git clone https://github.com/Nukufel/SwissTopoGeocoder_QGISProcessingTool.git
 
 2. Write me an e-mail so I can review it.
 3. This an open source project so u can also publish ur own modified version if I don't answer or react to your changes.

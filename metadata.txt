@@ -12,8 +12,8 @@ email=niklas.vogel@ost.ch
 
 about=SwissTopoGeocoder is a QGIS plugin designed to provide geocoding functionality using the SwissTopo geocoding service. The plugin allows users to perform geocoding on a vector layer by adding new features with coordinates based on address attributes.
 
-tracker=http://bugs
-repository=http://repo
+tracker=https://github.com/Nukufel/SwissTopoGeocoder_QGISProcessingTool/issues
+repository=https://github.com/Nukufel/SwissTopoGeocoder_QGISProcessingTool.git
 # End of mandatory metadata
 
 # Recommended items:
@@ -25,8 +25,8 @@ hasProcessingProvider=yes
 # Tags are comma separated with spaces allowed
 tags=python
 
-homepage=http://homepage
-category=Analysis
+homepage=https://www.ost.ch/de/forschung-und-dienstleistungen/informatik/ifs-institut-fuer-software/geometalab
+category=Vector
 icon=icon.png
 # experimental flag
 experimental=True
