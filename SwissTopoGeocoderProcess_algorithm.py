@@ -29,12 +29,11 @@ __copyright__ = '(C) 2023 by Nukufel'
 # This will get replaced with a git SHA1 when you do a git archive
 
 __revision__ = '$Format:%H$'
+
 from qgis.core import QgsProject, QgsPointXY, QgsVectorLayer, QgsField, QgsGeometry, QgsFeature, QgsProcessingFeedback
 from PyQt5.QtCore import QVariant
-from qgis.utils import iface
 import requests
 import time
-import threading
 
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import (QgsProcessing,
@@ -43,7 +42,9 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterFeatureSource,
                        QgsProcessingParameterFeatureSink,
                        QgsProcessingParameterField,
-                       QgsProcessingOutputMapLayer)
+                       QgsProcessingOutputMapLayer,
+                       QgsProcessingParameterVectorDestination,
+                       QgsProcessingOutputVectorLayer)
 
 
 class geocoderAlgorithm(QgsProcessingAlgorithm):
@@ -97,19 +98,18 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
         # algorithm is run in QGIS).
 
         self.addOutput(
-            QgsProcessingOutputMapLayer(
+            QgsProcessingOutputVectorLayer(
                 self.OUTPUT,
                 self.tr('Output layer')
             )
         )
-
 
     def processAlgorithm(self, parameters, context, feedback):
         """
         Here is where the processing itself takes place.
         """
 
-    # Retrieve the feature source and sink. The 'dest_id' variable is used
+        # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
         source = self.parameterAsLayer(parameters, self.LAYER_INPUT, context)
@@ -118,39 +118,16 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
         column_surce = self.parameterAsString(parameters, self.COLUMN_INPUT, context)
         print(column_surce)
 
-
         try:
             new_layer = self.define_layer(source.name(), column_surce, feedback)
-            parameters[self.OUTPUT] = new_layer
             QgsProject.instance().addMapLayer(new_layer)
             print(new_layer)
         except Exception as e:
             print(e)
-
-
-
-        # Compute the number of steps to display within the progress bar and
-        # get features from source
-        """total = 100.0 / source.featureCount() if source.featureCount() else 0
-        features = source.getFeatures()
-
-        for current, feature in enumerate(features):
-            # Stop the algorithm if cancel button has been clicked
-            if feedback.isCanceled():
-                break
-
-
-            # Update the progress bar
-            feedback.setProgress(int(current * total))"""
-
-        # Return the results of the algorithm. In this case our only result is
-        # the feature sink which contains the processed features, but some
-        # algorithms may return multiple feature sinks, calculated numeric
-        # statistics, etc. These should all be included in the returned
-        # dictionary, with keys matching the feature corresponding parameter
-        # or output names.
+            return {}
 
         return {self.OUTPUT: new_layer}
+
     def name(self):
         """
         Returns the algorithm name, used for identifying the algorithm. This
@@ -191,17 +168,11 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
     def createInstance(self):
         return geocoderAlgorithm()
 
-
-
-    @staticmethod
-    def error_handling_user(type, msg):
-        iface.messageBar().pushWarning(type, msg)
-
     @staticmethod
     def get_cords(address, fet, provider, new_layer):
         url = "https://api3.geo.admin.ch/rest/services/api/SearchServer?origins=address&type=locations&sr=2056&searchText="
 
-        query = address  # You may need to format the address as needed
+        query = address
 
         response = requests.get(url + query)
         response_json = response.json()
@@ -218,13 +189,12 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
             new_layer.updateExtents()
             new_layer.commitChanges()
 
-
     def define_layer(self, data_layer_name, address_col, feedback):
         try:
             layer = QgsProject.instance().mapLayersByName(data_layer_name)[0]
         except:
             print("Leyername does not exist.")
-            return
+            return None
 
         new_layer_name = "PointsLayer"
         new_layer = QgsVectorLayer("Point?crs=epsg:4326", new_layer_name, "memory")
@@ -240,6 +210,7 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
         for feature in layer.getFeatures():
             if feedback.isCanceled():
                 break
+
             try:
                 address = feature[address_col]
                 self.get_cords(address, fet, provider, new_layer)
@@ -250,8 +221,4 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
             time.sleep(1)
 
         new_layer.commitChanges()
-
-        #QgsProject.instance().addMapLayer(new_layer)
-        #print("New point layer created and added to the map.")
         return new_layer
-
