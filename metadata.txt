@@ -5,13 +5,13 @@
 [general]
 name=SwissTopoGeocoderProcess
 qgisMinimumVersion=3.0
-description=SwissTopoGeocoderProcess
+description=This is a process designed to provide geocoding functionality using the SwissTopo geocoding service.
 version=0.1
 author=Nukufel
 email=niklas.vogel@ost.ch
+about=SwissTopoGeocoder is a QGIS processing plugin designed to provide geocoding functionality using the SwissTopo geocoding service. The plugin allows users to perform geocoding on a vector layer by adding new features with coordinates based on address attributes.
 
-about=SwissTopoGeocoder is a QGIS plugin designed to provide geocoding functionality using the SwissTopo geocoding service. The plugin allows users to perform geocoding on a vector layer by adding new features with coordinates based on address attributes.
-
+homepage=https://github.com/Nukufel/SwissTopoGeocoder_QGISProcessingTool.git
 tracker=https://github.com/Nukufel/SwissTopoGeocoder_QGISProcessingTool/issues
 repository=https://github.com/Nukufel/SwissTopoGeocoder_QGISProcessingTool.git
 # End of mandatory metadata
