@@ -45,7 +45,11 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingOutputMapLayer,
                        QgsProcessingParameterVectorDestination,
                        QgsProcessingOutputVectorLayer,
-                       QgsProcessingFeedback)
+                       QgsProcessingFeedback,
+                       QgsProcessingUtils,
+                       QgsCoordinateTransform,
+                       QgsCoordinateReferenceSystem,
+                       QgsPointXY)
 
 
 class geocoderAlgorithm(QgsProcessingAlgorithm):
@@ -116,9 +120,12 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
         source = self.parameterAsLayer(parameters, self.LAYER_INPUT, context)
         column_surce = self.parameterAsString(parameters, self.COLUMN_INPUT, context)
 
+        target_crs_code = QgsProject.instance().crs().authid()  # Use the active QGIS project CRS
+
         try:
             new_layer = self.define_layer(source, column_surce, feedback)
-            QgsProject.instance().addMapLayer(new_layer)
+            transformed_layer = self.convert_layer_crs(new_layer, target_crs_code)
+            QgsProject.instance().addMapLayer(transformed_layer)
             feedback.pushInfo("Added new layer to map")
         except Exception as e:
             feedback.reportError(str(e), True)
@@ -126,7 +133,7 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
             return {}
 
         #return {}
-        return {self.OUTPUT: new_layer}
+        return {self.OUTPUT: transformed_layer}
 
     def name(self):
         """
@@ -181,7 +188,9 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
         longitude = response_json['results'][0]['attrs']['lon']
 
         if latitude is not None and longitude is not None:
+            # Create a point with the API coordinates
             point = QgsPointXY(float(longitude), float(latitude))
+
             fet.setGeometry(QgsGeometry.fromPointXY(point))
 
             fet.setAttributes([address, latitude, longitude])
@@ -190,12 +199,6 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
             new_layer.commitChanges()
 
     def define_layer(self, data_layer, address_col, feedback):
-        try:
-            layer = QgsProject.instance().mapLayersByName(data_layer.name())[0]
-        except:
-            feedback.reportError(self, "Layer does not exist.", True)
-            print("Leyername does not exist.")
-            return None
 
         new_layer_name = "PointsLayer"
         new_layer = QgsVectorLayer("Point?crs=epsg:4326", new_layer_name, "memory")
@@ -218,13 +221,47 @@ class geocoderAlgorithm(QgsProcessingAlgorithm):
             try:
                 address = feature[address_col]
                 self.get_cords(address, fet, provider, new_layer)
+
+
+
             except Exception as e:
                 # give push msg
                 feedback.pushInfo(address + " failed")
-                print(address, 'failed:', str(e))
+                print(address, 'failed:', e)
 
             feedback.setProgress(int(current * total))
             time.sleep(1)
 
         new_layer.commitChanges()
         return new_layer
+
+    def convert_layer_crs(self, input_layer, target_crs_code):
+        # Get the target CRS
+        target_crs = QgsCoordinateReferenceSystem(target_crs_code)
+
+        # Create a new layer with the target CRS
+        transformed_layer = QgsVectorLayer("Point?crs=" + target_crs_code, input_layer.name() + "_transformed", "memory")
+        transformed_provider = transformed_layer.dataProvider()
+        transformed_layer.startEditing()
+
+        # Add attributes to the new layer
+        transformed_provider.addAttributes(input_layer.fields())
+
+        # Get the coordinate transform object
+        transform = QgsCoordinateTransform(input_layer.crs(), target_crs, QgsProject.instance())
+
+        # Iterate over features in the input layer and transform geometry
+        for feature in input_layer.getFeatures():
+            new_feature = QgsFeature()
+            new_feature.setAttributes(feature.attributes())
+
+            # Transform the geometry (point) using QgsPointXY
+            geometry = QgsGeometry.fromPointXY(QgsPointXY(transform.transform(feature.geometry().asPoint())))
+            new_feature.setGeometry(geometry)
+
+            transformed_provider.addFeature(new_feature)
+
+        transformed_layer.commitChanges()
+        return transformed_layer
+
+
