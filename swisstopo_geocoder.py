@@ -43,7 +43,7 @@ if cmd_folder not in sys.path:
     sys.path.insert(0, cmd_folder)
 
 
-class SwisstopoGeocoderPlugin(object):
+class SwisstopoGeocoderPlugin:
 
     def __init__(self):
         self.provider = None
