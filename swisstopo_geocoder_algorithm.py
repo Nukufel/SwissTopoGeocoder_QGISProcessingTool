@@ -109,7 +109,6 @@ class SwisstopoGeocoderAlgorithm(QgsProcessingAlgorithm):
         target_crs_code = QgsProject.instance().crs().authid()  # Use the active QGIS project CRS
         target_crs = QgsCoordinateReferenceSystem(target_crs_code)
 
-
         # Retrieve the feature source and sink. The 'dest_id' variable is used
         # to uniquely identify the feature sink, and must be included in the
         # dictionary returned by the processAlgorithm function.
@@ -117,24 +116,28 @@ class SwisstopoGeocoderAlgorithm(QgsProcessingAlgorithm):
         column_source = self.parameterAsString(parameters, self.COLUMN_INPUT, context)
 
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT,
-                context, source.fields(), QgsWkbTypes.Point, target_crs)
+                                               context, source.fields(), QgsWkbTypes.Point, target_crs)
+
+        transform = QgsCoordinateTransform(swisstopo_crs, target_crs, QgsProject.instance())
 
         # Compute the number of steps to display within the progress bar and
-        # get features from source
         total = 100.0 / source.featureCount() if source.featureCount() else 0
-        features = source.getFeatures()
 
+        # get features from source
+        features = source.getFeatures()
 
         for current, feature in enumerate(features):
             # Stop the algorithm if cancel button has been clicked
             if feedback.isCanceled():
                 break
+
+            # Get address from feature
             address = feature[column_source]
+
             try:
-                self.get_cords(feature, address, swisstopo_crs, target_crs)
+                get_feature_by_address(feature, address, transform)
             except Exception as e:
-                # give push msg
-                feedback.pushInfo(address + " failed")
+                feedback.pushInfo(address + " failed", "\nError: " + e)
 
             # Add a feature in the sink
             sink.addFeature(feature, QgsFeatureSink.FastInsert)
@@ -150,28 +153,6 @@ class SwisstopoGeocoderAlgorithm(QgsProcessingAlgorithm):
         # dictionary, with keys matching the feature corresponding parameter
         # or output names.
         return {self.OUTPUT: dest_id}
-
-    @staticmethod
-    def get_cords(fet, address, source_crs, target_crs):
-
-        transform = QgsCoordinateTransform(source_crs, target_crs, QgsProject.instance())
-        url = "https://api3.geo.admin.ch/rest/services/api/SearchServer?origins=address&type=locations&sr=2056&searchText="
-
-        query = address
-
-        response = requests.get(url + query)
-        response_json = response.json()
-
-        latitude = response_json['results'][0]['attrs']['lat']
-        longitude = response_json['results'][0]['attrs']['lon']
-
-        if latitude is not None and longitude is not None:
-            # Create a point with the API coordinates
-            point = QgsPointXY(float(longitude), float(latitude))
-            transformed_point = QgsPointXY(transform.transform(point))
-
-            fet.setGeometry(QgsGeometry.fromPointXY(transformed_point))
-
 
     def name(self):
         """
@@ -212,3 +193,21 @@ class SwisstopoGeocoderAlgorithm(QgsProcessingAlgorithm):
 
     def createInstance(self):
         return SwisstopoGeocoderAlgorithm()
+
+
+def get_feature_by_address(fet, address, transform):
+    url = "https://api3.geo.admin.ch/rest/services/api/SearchServer?origins=address&type=locations&sr=2056&searchText="
+    query = address
+
+    response = requests.get(url + query)
+    response_json = response.json()
+
+    latitude = response_json['results'][0]['attrs']['lat']
+    longitude = response_json['results'][0]['attrs']['lon']
+
+    if latitude is not None and longitude is not None:
+        # Create a point with the API coordinates
+        point = QgsPointXY(float(longitude), float(latitude))
+        transformed_point = QgsPointXY(transform.transform(point))
+
+        fet.setGeometry(QgsGeometry.fromPointXY(transformed_point))
