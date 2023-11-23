@@ -137,7 +137,7 @@ class SwisstopoGeocoderAlgorithm(QgsProcessingAlgorithm):
             try:
                 get_feature_by_address(feature, address, transform)
             except Exception as e:
-                feedback.pushInfo(address + " failed", "\nError: " + e)
+                feedback.pushInfo(address + " failed\nError: " + str(e))
 
             # Add a feature in the sink
             sink.addFeature(feature, QgsFeatureSink.FastInsert)
